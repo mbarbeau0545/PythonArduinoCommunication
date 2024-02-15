@@ -1,10 +1,40 @@
+/* ******************************************************************
+ * Copyright (C) 2017 - KUHN SA - Electronics
+ * 
+ * This document is KUHN SA property.
+ * It should not be reproduced in any medium or used in any way
+ * without prior written consent of KUHN SA
 /*********************************************************************
- * @file        Template.c
- * @brief       Template_BriefDescription.
- * @details     TemplateDetailsDescription.\n
- *
- * @author      xxxxxx
- * @date        jj/mm/yyyy
+ * @file        Pyduino_Com.c
+ * @brief       Communication Function to set and get pin value on Arduino.
+ * @details     In order to exchange data between Python and the Arduino,
+ *              A protocol has been made to do so.\n
+ *         
+ * 
+ *                          |-------|------------------------|
+ *                          | Octet |       Description      |
+ *                          |-------|------------------------|
+ *                          |   0   | Start Byte(char(0))    |
+ *                          |-------|------------------------|
+ *                          |   1   | Check Sum              |
+ *                          |-------|------------------------|
+ *                          |   2   | Signal Type            |
+ *                          |-------|------------------------|
+ *                          |   3   | Function to use        |
+ *                          |-------|------------------------|
+ *                          |   4   | Pin Number             |
+ *                          |-------|------------------------|
+ *                          |   5   | Value                  | 
+ *                          |-------|------------------------|
+ *                          |   6   | None                   |
+ *                          |-------|------------------------|
+ *                          |   7   | End Byte(10)           |
+ *                          |-------|------------------------|
+ * 
+ *              Python send 8 bytes of data as shown above, to indicate 
+ *              Which function has to be used and wich pin is conce
+ * @author      AUDMBA
+ * @date        10/02/2024
  * @version     1.0
  */
 
@@ -19,6 +49,7 @@
 // ********************************************************************
 // *                      Types
 // ********************************************************************
+
 t_uint8 g_rcvData_ua8[MAX_NB_RCV_DATA] = 
 {
     (t_uint8)0,
@@ -37,10 +68,17 @@ t_uint8 g_rcvData_ua8[MAX_NB_RCV_DATA] =
 // ********************************************************************
 // *                      Variables
 // ********************************************************************
-
+t_bool g_moduleInitialized_b = (t_bool)false;
 // ********************************************************************
 // *                      Classe Prototype
 // ********************************************************************
+t_eReturnCode Pyduino_Com::Start_Communication()
+{
+    t_eReturnCode Ret_e = RC_OK;
+
+}
+
+
 t_eReturnCode Pyduino_Com::SetArduinoCommand(t_ePyduino_Function f_FunctionSet_e, t_ePyduino_SignalType f_PinType ,t_uint8 f_selectedPin_u8, t_uint8 f_values)
 {
     t_eReturnCode Ret_e = RC_OK;
@@ -48,7 +86,7 @@ t_eReturnCode Pyduino_Com::SetArduinoCommand(t_ePyduino_Function f_FunctionSet_e
     {
         Ret_e = RC_ERROR_PARAM_INVALID;
     }
-    if(f_PinType < (t_uint8)0 || f_PinType > (t_uint8)PYDUINO_NB_TYPE)
+    if(f_PinType < (t_uint8)0 || f_PinType > (t_uint8)PYDUINO_SIGNAL_NB)
     {
         Ret_e = RC_ERROR_PARAM_INVALID;
     }
@@ -56,17 +94,17 @@ t_eReturnCode Pyduino_Com::SetArduinoCommand(t_ePyduino_Function f_FunctionSet_e
     {
         switch(f_PinType)
         {
-            case PYDUINO_ANALOGIC_TYPE:
+            case PYDUINO_SIGNAL_ANALOGIC:
             {
                 Ret_e =  SetAnalogicCommand(f_FunctionSet_e, f_selectedPin_u8, f_values);
                 break;
             }
-            case PYDUINO_DIGITAL_TYPE : 
+            case PYDUINO_SIGNAL_DIGITAL : 
             {
                 Ret_e = SetDigitalCommand(f_FunctionSet_e, f_selectedPin_u8, f_values);
                 break;
             }
-            case PYDUINO_NB_TYPE:
+            case PYDUINO_SIGNAL_NB:
             {
                 break;
             }
@@ -130,20 +168,23 @@ t_eReturnCode Pyduino_Com::ListenPythonForCommand(void)
     t_eReturnCode Ret_e = RC_OK;
     byte ReceivedBytes_by;
     t_uint8 countor_RcvData_u8;
-    t_bool ReceptionningCommand_b;
-    
+    t_bool ReceptionningCommand_b = (t_bool)false;
+    t_uint8 checkIndex_u8;
+    t_bool CheckData_b = (t_bool)true;
     //Arduino waiting instructions  which are commmunicate from Python through Serial Com
     while(Serial.available() > 0 && Ret_e == RC_OK)
     {
+
         //We save the former byte if there is more than one byte received
         ReceivedBytes_by = (byte)Serial.read();
         //--------------------------------------------------------
         //-------------------Reminder-----------------------------
+        //--------------------------------------------------------
         //Fisrt Byte should be the Start bytes define in .h file
-        // Last Byte should be the Ending byte define in ?h file
+        // Last Byte should be the Ending byte define in .h file
         //--------------------------------------------------------
         //Testing if the recv byte is the starting byte
-        if(ReceivedBytes_by == (byte)START_BYTE_RCV_DATA)
+        if(ReceivedBytes_by == (byte)START_BYTE_RCV_DATA && ReceptionningCommand_b == (t_bool)false)
         {
             //we're gonna asemble the msg
             countor_RcvData_u8 = (t_uint8)1;
@@ -158,7 +199,7 @@ t_eReturnCode Pyduino_Com::ListenPythonForCommand(void)
             countor_RcvData_u8++;
 
             if(countor_RcvData_u8 == (t_uint8)MAX_NB_RCV_DATA 
-              && g_rcvData_ua8[PYDUINO_ENDING_BYTE] == (t_uint8)END_BYTE_RCV_DATA)
+            && g_rcvData_ua8[PYDUINO_ENDING_BYTE] == (t_uint8)END_BYTE_RCV_DATA)
             {
                 //Re-initialize stuff
                 ReceptionningCommand_b = (t_bool)false;
@@ -169,10 +210,27 @@ t_eReturnCode Pyduino_Com::ListenPythonForCommand(void)
                 Ret_e = CheckSum_RcvData();
                 if(Ret_e == RC_OK)
                 {
-                    Ret_e = SetArduinoCommand((t_ePyduino_Function)g_rcvData_ua8[PYDUINO_FUNCTION_TYPE_BYTE],
-                                            (t_ePyduino_SignalType)g_rcvData_ua8[PYDUINO_SIGNAL_TYPE_BYTE],
-                                            (t_uint8) g_rcvData_ua8[PYDUINO_PIN_NUMBER_BYTE],
-                                            (t_uint8)g_rcvData_ua8[PYDUINO_ASSIGN_VALUE_BYTE]);
+                    if(g_moduleInitialized_b == (t_bool)true)
+                    {
+                        Ret_e = SetArduinoCommand((t_ePyduino_Function)g_rcvData_ua8[PYDUINO_FUNCTION_TYPE_BYTE],
+                                                (t_ePyduino_SignalType)g_rcvData_ua8[PYDUINO_SIGNAL_TYPE_BYTE],
+                                                (t_uint8) g_rcvData_ua8[PYDUINO_PIN_NUMBER_BYTE],
+                                                (t_uint8)g_rcvData_ua8[PYDUINO_ASSIGN_VALUE_BYTE]);
+                    }
+                    else
+                    {//g_moduleInitialized_b == (t_bool)false
+                        for(checkIndex_u8 = (t_uint8)1 ; checkIndex_u8 < (t_uint8)(MAX_NB_RCV_DATA - 1); checkIndex_u8++)
+                        {
+                            if(g_rcvData_ua8[checkIndex_u8] != (t_uint8)0)
+                            {
+                                CheckData_b = (t_bool)false;
+                            }
+                        }
+                        if(CheckData_b == (t_bool)true)
+                        {
+                            Serial.println("Start communication status : ok");
+                        }
+                    }
                 }
                 else 
                 {
@@ -180,8 +238,9 @@ t_eReturnCode Pyduino_Com::ListenPythonForCommand(void)
                     Serial.println(Ret_e);
                 }                
             }
-        }        
-    }
+        }
+    }        
+    
     return Ret_e;
 }
 

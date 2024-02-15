@@ -1,26 +1,39 @@
+/* ******************************************************************
+ * Copyright (C) 2017 - KUHN SA - Electronics
+ * 
+ * This document is KUHN SA property.
+ * It should not be reproduced in any medium or used in any way
+ * without prior written consent of KUHN SA
 /*********************************************************************
- * @file        ModuleArduino.h
- * @brief       Template_BriefDescription.
- * @details     TemplateDetailsDescription.\n
- *           |-------|------------------------|
- *           | Octet |       Description      |
- *           |-------|------------------------|
- *           |   0   | Start Byte(char(0))    |
- *           |-------|------------------------|
- *           |   1   | Check Sum              |
- *           |-------|------------------------|
- *           |   2   | Signal Type            |
- *           |-------|------------------------|
- *           |   3   | Function to use        |
- *           |-------|------------------------|
- *           |   4   | Pin Number             |
- *           |-------|------------------------|
- *           |   5   | Value                  | 
- *           |-------|------------------------|
- *           |   6   | None                   |
- *           |-------|------------------------|
- *           |   7   | End Byte(10)           |
- *           |-------|------------------------|
+ * @file        Pyduino_Com.h
+ * @brief       Communication Function to set and get pin value on Arduino.
+ * @details     In order to exchange data between Python and the Arduino,
+ *              A protocol has been made to do so.\n
+ *         
+ * 
+ *                          |-------|------------------------|
+ *                          | Octet |       Description      |
+ *                          |-------|------------------------|
+ *                          |   0   | Start Byte(char(0))    |
+ *                          |-------|------------------------|
+ *                          |   1   | Check Sum              |
+ *                          |-------|------------------------|
+ *                          |   2   | Signal Type            |
+ *                          |-------|------------------------|
+ *                          |   3   | Function to use        |
+ *                          |-------|------------------------|
+ *                          |   4   | Pin Number             |
+ *                          |-------|------------------------|
+ *                          |   5   | Value                  | 
+ *                          |-------|------------------------|
+ *                          |   6   | None                   |
+ *                          |-------|------------------------|
+ *                          |   7   | End Byte(10)           |
+ *                          |-------|------------------------|
+ * 
+ *             Python send 8 bytes of data as shown above, to indicate 
+ *             Which function has to be used and wich pin is concerned 
+ *             We also send the value assign to the dedicate pin 
  *
  * @author      AUDMBA
  * @date        10/2/2024
@@ -30,8 +43,7 @@
 // ********************************************************************
 // *                      Includes
 // ********************************************************************
-#include "Include/Config/TypeCommon.h"
-#include <Arduino.h>
+#include "Types_Common.h"
 // ********************************************************************
 // *                      Defines
 // ********************************************************************
@@ -41,9 +53,8 @@
 // ********************************************************************
 // *                      Types
 // ********************************************************************
+
 /*------------------------------ENUM-----------------------------------*/
-
-
 typedef enum
 {
     PYDUINO_FUNCTION_ANALOG_READ = 0,
@@ -57,9 +68,10 @@ typedef enum
 
 typedef enum
 {
-    PYDUINO_ANALOGIC_TYPE = 0,
-    PYDUINO_DIGITAL_TYPE,
-    PYDUINO_NB_TYPE,
+    PYDUINO_SIGNAL_ANALOGIC = 0,
+    PYDUINO_SIGNAL_DIGITAL,
+
+    PYDUINO_SIGNAL_NB,
 }t_ePyduino_SignalType;
 
 typedef enum 
@@ -69,7 +81,7 @@ typedef enum
     PYDUINO_SIGNAL_TYPE_BYTE,        // Which t_ePyduino_PinType is concernced
     PYDUINO_FUNCTION_TYPE_BYTE,      //Which t_ePyduino_Function is concerned
     PYDUINO_PIN_NUMBER_BYTE,         //Whihc pin is concerned
-    PYDUINO_ASSIGN_VALUE_BYTE,              // To define has to be 0xOO in this case
+    PYDUINO_ASSIGN_VALUE_BYTE,       //Assign value
     PYDUINO_NONE_BYTE2,              // To define has to be 0xOO in this case
     PYDUINO_ENDING_BYTE,            // End byte, message is finished 
 
@@ -77,26 +89,10 @@ typedef enum
 
 }t_ePyduino_RcvData;
 
-typedef enum 
-{
-    PYDUINO_ARDUINO_UNO_REV3,
-    PYDUINO_ARDUINO_UNO_R3,
-    PYDUINO_ARDUINO_UNO_R4,
-    PYDUINO_ARDUINO_ATMEGA328P,
-    PYDUINO_ARDUINO_ATMEGA32,
-    PYDUINO_ARDUINO_ATMEGA32U4,
-    PYDUINO_ARDUINO_NANO_V3,
-}t_ePyduino_ArduinoCart;
+
 /*----------------------------STRUCTURE---------------------------------*/
-/*typedef struct
-{
-    t_char initiateDataMsg_c;
-    t_uint8 checkSum_u8;
-    t_ePyduino_CommandType isAnaorDigValue_u;
-    t_uPyduino_Pin_ArduinoUnoR3 TypeCommand_e;
 
 
-}t_sPyduino_RcvData;*/
 /*------------------------------UNION--------------------------------*/
 
 // ********************************************************************
@@ -117,8 +113,8 @@ class Pyduino_Com
         /**
         *
         *	@brief      Initiate the communication with Python
-        *	@details    Set the right version of Arduino the right Port used
-        *               The right Baudrate and the right timelaps delay 
+        *	@details    
+        *               
         *
         *
         *  @param[in]
@@ -141,33 +137,41 @@ class Pyduino_Com
         *  @retval RC_OK			@copydoc RC_OK
         *
         */
-        t_eReturnCode Stop_Communication();
+        //t_eReturnCode Stop_Communication();
         /**
         *
         *	@brief      Set the arduino Command wanted by user
         *	@details    
         *
         *
-        *  @param[in]
+        *  @param[in] f_FunctionSet_e   : The function wanted by python in t_ePyduino_Function choice
+        *  @param[in] f_PinType         : The pin type (Signal, Analogic)
+        *  @param[in] f_selectedPin_u8  : The concerned pin
+        *  @param[in] f_values          : Value to assign
         *  @param[out]
-        *
-        *  @retval RC_OK			@copydoc RC_OK
+        * 
+        *  @retval RC_OK			                @copydoc RC_OK
+        *  @retval RC_ERROR_PARAM_INVALIDOK			@copydoc RC_ERROR_PARAM_INVALID
         *
         */
         t_eReturnCode SetArduinoCommand(t_ePyduino_Function f_FunctionSet_e, t_ePyduino_SignalType f_PinType ,t_uint8 f_selectedPin_u8, t_uint8 f_values);
         /**
         *
-        *	@brief      Wait for python orders and collecting them in a buffer 
+        *	@brief      Get the last arduino Command set by python user
         *	@details    
         *
         *
-        *  @param[in]
+        *  @param[in] f_FunctionSet_e   : The function wanted by python in t_ePyduino_Function choice
+        *  @param[in] f_PinType         : The pin type (Signal, Analogic)
+        *  @param[in] f_selectedPin_u8  : The concerned pin
+        *  @param[in] f_values          : Value to assign
         *  @param[out]
-        *
-        *  @retval RC_OK			@copydoc RC_OK
+        * 
+        *  @retval RC_OK			                @copydoc RC_OK
+        *  @retval RC_ERROR_PARAM_INVALIDOK			@copydoc RC_ERROR_PARAM_INVALID
         *
         */
-        t_eReturnCode GetArduinoCommand(t_ePyduino_Function f_FunctionSet_e, t_uint8 f_selectedPin_u, t_uint16 f_values);
+        t_eReturnCode GetArduinoCommand(t_ePyduino_Function f_FunctionSet_e, t_ePyduino_SignalType f_PinType ,t_uint8 f_selectedPin_u8, t_uint8 f_values);
         /**
         *
         *	@brief      Wait for python orders and collecting them in a buffer 
@@ -212,11 +216,13 @@ class Pyduino_Com
 
         /**
         *
-        *	@brief      Check the number of bytes received is conform with what's expected
+        *	@brief      Set an analogic command on Arduino
         *	@details    
         *
         *
-        *  @param[in]
+        *  @param[in] f_FunctionSet_e   : The function wanted by python in t_ePyduino_Function choice
+        *  @param[in] f_selectedPin_u8  : The concerned pin
+        *  @param[in] f_values          : Value to assign
         *  @param[out]
         *
         *  @retval RC_OK			@copydoc RC_OK
@@ -225,12 +231,13 @@ class Pyduino_Com
         t_eReturnCode SetAnalogicCommand(t_ePyduino_Function f_FunctionSet_e, t_uint8 f_selectedPin_u8, t_uint16 f_values);
         /**
         *
-        *	@brief      Check the number of bytes received is conform with what's expected
+        *	@brief      Set an Digitial command on Arduino
         *	@details    
         *
         *
-        *  @param[in]
-        *  @param[out]
+        *  @param[in] f_FunctionSet_e   : The function wanted by python in t_ePyduino_Function choice
+        *  @param[in] f_selectedPin_u8  : The concerned pin
+        *  @param[in] f_values          : Value to assign
         *
         *  @retval RC_OK			@copydoc RC_OK
         *
@@ -238,7 +245,7 @@ class Pyduino_Com
         t_eReturnCode SetDigitalCommand(t_ePyduino_Function f_FunctionSet_e, t_uint8 f_selectedPin_u8, t_uint16 f_values);
         /**
         *
-        *	@brief      Check the number of bytes received is conform with what's expected
+        *	@brief      Reset to (t_uint8)0, elements of the array receiving the Data 
         *	@details    
         *
         *
