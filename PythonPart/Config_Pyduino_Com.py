@@ -40,8 +40,8 @@ PYDUINO_SIGNAL_NB                   =  (0x02)
 #-------------------------------------------------
 # Arduino Value Mnged
 #-------------------------------------------------
-PYDUINO_ASSIGN_VALUE_LOW  =  (0x00)
-PYDUINO_ASSIGN_VALUE_HIGH =  (0x01)
+PYDUINO_ASSIGN_VALUE_LOW  =  (0x0)
+PYDUINO_ASSIGN_VALUE_HIGH =  (0x1)
 
 PYDUINO_ASSIGN_VALUE_NB = (0x02)
 

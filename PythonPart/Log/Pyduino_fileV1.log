@@ -1,0 +1,36 @@
+##########################################################################
+#  @file              Pyduino_file.log
+#  @brief             This document purpose is for Repertory all exchange between Python and the Arduino .
+#  @author            AUDMBA
+#  @Last Update       2024-02-15
+############################################################################
+
+2024-02-15 21:48:18 [INFO] [b'Start communication statut : ok']
+2024-02-15 21:48:18 [INFO] Module Pyduino COm initialize, RetCode :: (0, ' Process finished successfully. ')
+2024-02-15 21:48:21 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:48:21 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:
+2024-02-15 21:48:27 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:48:27 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:
+2024-02-15 21:48:33 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:48:33 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:
+2024-02-15 21:48:39 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:48:39 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:
+2024-02-15 21:48:45 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:48:45 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:
+2024-02-15 21:48:51 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:48:51 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:
+2024-02-15 21:48:57 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:48:57 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:
+2024-02-15 21:49:03 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:49:03 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:
+2024-02-15 21:49:09 [INFO] Python send : [254, 0, 1, 3, 5, 0, 0, 255]
+2024-02-15 21:49:10 [INFO] Python rcv SetArduinoCommand [254,0,1,3,5,0,0,255 Retcode : 0
+:

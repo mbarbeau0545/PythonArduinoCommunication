@@ -37,6 +37,7 @@
 ################################################################################
 #                                       IMPORT
 ################################################################################
+from ModuleLog.ModuleLog import*
 from TypeCommon import*
 from Config_Pyduino_Com import*
 import serial 
@@ -49,8 +50,8 @@ import time
 # Max time waiting for read or write msg on serial communication
 MAX_TIME_WAITING = 2000
 #Arduino Parameter
-ARDUINO_CART_USE = PYDUINO_ARDUINO_MEGA2560
-COMMUNICATION_PORT = "COM4"
+ARDUINO_CART_USE = PYDUINO_ARDUINO_UNO_R3
+COMMUNICATION_PORT = "COM5"
 COMMUNICATION_SPEED = 9600
 TIMEOUT_DELAY = 0x03
 g_MaxAnaPin_ua = [
@@ -90,7 +91,7 @@ g_CommandArduino_StartCom_ua = [
     END_BYTE_SEND_DATA,
 ]
 #Cmd c=should be receiving by arduino to complete communication
-ARDUINO_START_MSG = "Start communication status : ok"
+ARDUINO_START_MSG = "Start communication statut : ok"
 
 # Fisrt command for Arduino to start communication 
 g_CommandArduino_EndCom_ua = [
@@ -126,8 +127,8 @@ g_CommandArduinoLED_ON_ua = [
      (0x00),                                          # Checksum byte
     PYDUINO_SIGNAL_DIGITAL,                            # Which t_ePyduino_PinType is concernced
     PYDUINO_FUNCTION_DIGITAL_WRITE,                  # Which t_ePyduino_Function is concerned
-    UNO_MEGA_2560_PIN_DIG_PWM_D5,                                  # Whihc pin is concerned
-    PYDUINO_ASSIGN_VALUE_HIGH,                                            # Value
+    UNO_R3_DIG__D5,                                  # Whihc pin is concerned
+    3,                                            # Value
     (0x00),                                          # To define has to be 0xOO in this case
     END_BYTE_SEND_DATA                               # End byte, message is finished 
 ]
@@ -136,7 +137,7 @@ g_CommandArduinoLED_OFF_ua = [
      (0x00),
     PYDUINO_SIGNAL_DIGITAL,
     PYDUINO_FUNCTION_DIGITAL_WRITE,
-    UNO_MEGA_2560_PIN_DIG_PWM_D5,
+    UNO_R3_DIG__D5,
     PYDUINO_ASSIGN_VALUE_LOW,
     (0x00),
     END_BYTE_SEND_DATA
@@ -166,6 +167,8 @@ class ArduinoCommunication():
             self.serieCom.port = f_Communication_port_str
             self.serieCom.baudrate = f_CommuniationSpeed_ui
             self.serieCom.timeout  = f_TimeOut_Delay_ui
+            #generate Output file
+            self.makeLog = MngLogFile("Log","Pyduino_file.log",log.DEBUG, "Repertory all exchange between Python and the Arduino")
     #----------------------
     # Initialize_ArduinoCom
     #----------------------
@@ -191,15 +194,24 @@ class ArduinoCommunication():
             try:
                 self.serieCom.open()
             except:
+                Ret_e = RC.ERROR_MODULE_NOT_INITIALIZED
+                self.makeLog.LCF_SetMsgLog(log.ERROR, "Cannot open the serial communication Retcode ",Ret_e)
                 raise Exception("Initialize_ArduinoCom : Cannot open the serial canal with Arduino")
             #send the Start MSG
-            Ret_e = self.Send_ArduinoCommand(g_CommandArduino_StartCom_ua)
-            if(Ret_e == RC.OK):
-                while(ArduinoStart_msg_str != ARDUINO_START_MSG and counterLoop_ui <  (MAX_TIME_WAITING) ):
-                    counterLoop_ui+=  (1)
-                    self.Read_ArduinoSerial()
-                if(counterLoop_ui <  (MAX_TIME_WAITING)):
-                    self.moduleIntialize_b = bool(True)
+        self.makeLog.LCF_SetMsgLog(log.INFO, f"Connection on port {self.serieCom.port} succeed")
+        if(Ret_e == RC.OK):
+            while(counterLoop_ui <  (MAX_TIME_WAITING) ):
+                counterLoop_ui += int(1)
+                ArduinoStart_msg_str = self.serieCom.readlines()            
+                if(ARDUINO_START_MSG in str(ArduinoStart_msg_str)):
+                    self.makeLog.LCF_SetMsgLog(log.INFO, str(ArduinoStart_msg_str))
+                    break
+            if(counterLoop_ui <  (MAX_TIME_WAITING)):
+                self.moduleIntialize_b = bool(True)
+                self.makeLog.LCF_SetMsgLog(log.INFO, "Module Pyduino_Cm initialize, RetCode ",Ret_e)
+
+                
+            
         return Ret_e
     #------------------------
     # Unintialize_ArduinoCom
@@ -230,8 +242,6 @@ class ArduinoCommunication():
         """
         RC = t_eReturnCode()
         Ret_e= RC.OK
-        bytes_available_ui:int
-        counterSend_msg_ui:int = int(0)
         #verify parameter
         if(isinstance(f_arduinoCommand_ua,list) != bool(True)):
             Ret_e = RC.ERROR_PARAM_INVALID
@@ -261,15 +271,14 @@ class ArduinoCommunication():
                 Ret_e = RC.ERROR_NOT_ALLOWED
         if(Ret_e == RC.OK):
             #verify if the bus can handle 8 bytes emition 
-            while(counterSend_msg_ui < int(MAX_TIME_WAITING)):
-                counterSend_msg_ui += int(1)
-                bytes_available_ui = self.serieCom.in_waiting
-                if(bytes_available_ui >= len(bytearray(f_arduinoCommand_ua))):
-                #/!\ precendently used bytes and working with that
-                    self.serieCom.write(bytearray(f_arduinoCommand_ua))
-                    break
-            if(counterSend_msg_ui >= int(MAX_TIME_WAITING)):
+            try:
+                self.serieCom.write(bytes(f_arduinoCommand_ua))
+                self.makeLog.LCF_SetMsgLog(log.INFO, "Python send ",str(f_arduinoCommand_ua))
+                msg = self.Read_ArduinoSerial()
+                self.makeLog.LCF_SetMsgLog(log.INFO, f"Python rcv {str(msg)}:")
+            except: 
                 Ret_e = RC.ERROR_BUSY
+                self.makeLog.LCF_SetMsgLog(log.ERROR, "Cannot send Data on SerialCommunication in Send_ArduinoCommand Retcode:",Ret_e)
         return Ret_e
     #------------------------
     # Read_ArduinoSerial
@@ -278,7 +287,7 @@ class ArduinoCommunication():
         """
             @brief      Read a complete lines from Serial Bus and return it 
         """
-        return self.serieCom.readline("").decode()
+        return self.serieCom.readline().decode()
     
 ################################################################################
 #                              FUNCTION DECLARATION
@@ -291,9 +300,21 @@ class ArduinoCommunication():
 def main()-> None:
     RC = t_eReturnCode()
     Ret_e = RC.OK
-    s = ArduinoCommunication(COMMUNICATION_PORT,COMMUNICATION_SPEED,TIMEOUT_DELAY)
-    Ret_e = s.Send_ArduinoCommand(g_CommandArduinoLED_OFF_ua)
-    print(Ret_e)
+    serieCom = ArduinoCommunication(COMMUNICATION_PORT,COMMUNICATION_SPEED,TIMEOUT_DELAY)
+    Ret_e = serieCom.Initialize_ArduinoCom()
+    while(1):
+        if(Ret_e == RC.OK):
+
+            Ret_e =   serieCom.Send_ArduinoCommand(g_CommandArduinoLED_ON_ua)
+            time.sleep(3)
+            Ret_e =   serieCom.Send_ArduinoCommand(g_CommandArduinoLED_OFF_ua)
+            print(Ret_e)
+            time.sleep(3)
+            print(f"Arduino second: {Ret_e}")
+    return
+   
+
+
 ################################################################################
 #			                MAIN
 ################################################################################
